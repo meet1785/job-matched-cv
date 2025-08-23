@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { ATSScoring } from "./ATSScoring";
 
 interface MakeIntegrationProps {
   candidateData: any;
@@ -16,6 +17,7 @@ interface MakeIntegrationProps {
 export const MakeIntegration = ({ candidateData, jobData, onComplete }: MakeIntegrationProps) => {
   const [webhookUrl, setWebhookUrl] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showATSScoring, setShowATSScoring] = useState(false);
   const [progress, setProgress] = useState(0);
   const [processingSteps, setProcessingSteps] = useState<string[]>([]);
   const { toast } = useToast();
@@ -45,11 +47,11 @@ export const MakeIntegration = ({ candidateData, jobData, onComplete }: MakeInte
         if (index === steps.length - 1) {
           setTimeout(() => {
             setIsProcessing(false);
+            setShowATSScoring(true);
             toast({
               title: "Resume Generated Successfully!",
-              description: "Your ATS-optimized resume has been created and sent to your Make.com workflow.",
+              description: "Review your ATS compatibility score below.",
             });
-            onComplete();
           }, 1000);
         }
       }, index * 800);
@@ -120,7 +122,7 @@ export const MakeIntegration = ({ candidateData, jobData, onComplete }: MakeInte
         </p>
       </CardHeader>
       <CardContent>
-        {!isProcessing ? (
+        {!isProcessing && !showATSScoring ? (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="webhookUrl">Make.com Webhook URL *</Label>
@@ -162,6 +164,22 @@ export const MakeIntegration = ({ candidateData, jobData, onComplete }: MakeInte
               Generate Resume with Make.com
             </Button>
           </form>
+        ) : showATSScoring ? (
+          <div className="space-y-6">
+            <ATSScoring 
+              candidateData={candidateData} 
+              jobData={jobData} 
+              isLoading={false}
+            />
+            <div className="text-center">
+              <Button 
+                onClick={onComplete}
+                className="bg-gradient-primary hover:shadow-elegant transition-all duration-300 text-lg py-6 px-8"
+              >
+                Complete Resume Generation
+              </Button>
+            </div>
+          </div>
         ) : (
           <div className="space-y-6">
             <div className="text-center">
