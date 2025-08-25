@@ -3,15 +3,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 
-interface ATSScore {
-  overall: number;
-  categories: {
-    keywords: { score: number; status: 'good' | 'warning' | 'poor'; details: string[] };
-    formatting: { score: number; status: 'good' | 'warning' | 'poor'; details: string[] };
-    sections: { score: number; status: 'good' | 'warning' | 'poor'; details: string[] };
-    readability: { score: number; status: 'good' | 'warning' | 'poor'; details: string[] };
-  };
-}
+interface ATSScoreCategory { score: number; status: 'good' | 'warning' | 'poor'; details: string[] }
+interface ATSScore { overall: number; categories: { keywords: ATSScoreCategory; formatting: ATSScoreCategory; sections: ATSScoreCategory; readability: ATSScoreCategory; }; }
 
 interface CandidateData {
   fullName: string;
@@ -43,57 +36,90 @@ interface ATSScoringProps {
 }
 
 export const ATSScoring = ({ candidateData, jobData, isLoading }: ATSScoringProps) => {
-  // Mock ATS scoring calculation
+  // Dynamic ATS scoring calculation (heuristic)
   const calculateATSScore = (): ATSScore => {
-    const candidateSkills = candidateData.skills.toLowerCase().split(',').map((s: string) => s.trim());
-    const jobKeywords = jobData.aiAnalysis?.keywords.map((k: string) => k.toLowerCase()) || [];
-    
-    const keywordMatches = jobKeywords.filter(keyword => 
-      candidateSkills.some(skill => skill.includes(keyword.toLowerCase()))
-    );
-    
-    const keywordScore = Math.min(95, (keywordMatches.length / jobKeywords.length) * 100);
-    
-    // Format preservation bonus for uploaded resumes
-    const formatBonus = candidateData.isFromUpload ? 5 : 0;
-    
+    const candidateSkills = candidateData.skills.toLowerCase().split(/[,;\n]+/).map(s => s.trim()).filter(Boolean);
+    const jobKeywords = (jobData.aiAnalysis?.keywords || []).map(k => k.toLowerCase());
+    const jobRequirements = jobData.aiAnalysis?.requirements || [];
+
+    // Keyword coverage
+    const keywordMatches = jobKeywords.filter(keyword => candidateSkills.some(skill => skill.includes(keyword) || keyword.includes(skill)));
+    const keywordScoreRaw = jobKeywords.length ? (keywordMatches.length / jobKeywords.length) * 100 : 0;
+    const keywordScore = Math.round(Math.min(100, keywordScoreRaw));
+
+    // Section presence
+    const essentialSections: Array<[string, string]> = [
+      ['summary', candidateData.summary],
+      ['experience', candidateData.experience],
+      ['skills', candidateData.skills],
+      ['education', candidateData.education]
+    ];
+    const present = essentialSections.filter(([_, content]) => content && content.trim().length > 30).length;
+    const sectionsScore = Math.round((present / essentialSections.length) * 100);
+
+    // Formatting heuristics
+    const bulletCount = (candidateData.experience.match(/\n?•|^-|^\*/gm) || []).length;
+    const avgLineLen = candidateData.experience.split(/\n+/).filter(l => l.trim()).reduce((a,l)=>a+l.length,0) / Math.max(1, candidateData.experience.split(/\n+/).filter(l => l.trim()).length);
+    let formattingScore = 70;
+    if (bulletCount > 3) formattingScore += 10;
+    if (avgLineLen < 180) formattingScore += 10; // shorter lines easier for parsers
+    if (candidateData.isFromUpload) formattingScore += 5; // preserved structure
+    formattingScore = Math.min(100, formattingScore);
+
+    // Readability heuristic (average words per sentence + action verbs)
+    const sentences = candidateData.experience.split(/[.!?]+/).map(s => s.trim()).filter(Boolean);
+    const totalWords = sentences.reduce((a,s)=>a+s.split(/\s+/).filter(Boolean).length,0);
+    const avgWordsPerSentence = totalWords / Math.max(1, sentences.length);
+    const actionVerbs = ['led','managed','developed','built','improved','optimized','designed','implemented','collaborated','created','reduced','increased','delivered'];
+    const actionVerbMatches = candidateData.experience.toLowerCase().split(/\b/).filter(t => actionVerbs.includes(t.trim())).length;
+    let readabilityScore = 70;
+    if (avgWordsPerSentence >= 10 && avgWordsPerSentence <= 25) readabilityScore += 15; else readabilityScore -= 10;
+    if (actionVerbMatches >= Math.max(3, sentences.length * 0.3)) readabilityScore += 10; else readabilityScore -= 5;
+    if (candidateData.experience.length > 400) readabilityScore += 5;
+    readabilityScore = Math.max(30, Math.min(100, readabilityScore));
+
+    // Combine weighted
+    const overall = Math.round((keywordScore * 0.35) + (sectionsScore * 0.2) + (formattingScore * 0.2) + (readabilityScore * 0.25));
+
+    const mkStatus = (score: number): 'good' | 'warning' | 'poor' => score >= 80 ? 'good' : score >= 60 ? 'warning' : 'poor';
+
     return {
-      overall: Math.round((keywordScore + 88 + 92 + 85 + formatBonus) / 4), // Enhanced overall score
+      overall,
       categories: {
         keywords: {
-          score: Math.round(keywordScore),
-          status: keywordScore >= 80 ? 'good' : keywordScore >= 60 ? 'warning' : 'poor',
+          score: keywordScore,
+            status: mkStatus(keywordScore),
           details: [
-            `${keywordMatches.length}/${jobKeywords.length} job keywords found`,
-            keywordScore >= 80 ? 'Excellent keyword coverage' : 'Consider adding more relevant keywords',
-            'Skills section well-optimized for ATS parsing'
+            `${keywordMatches.length}/${jobKeywords.length || 0} job keywords matched`,
+            jobKeywords.length ? `Top missing: ${jobKeywords.filter(k => !keywordMatches.includes(k)).slice(0,5).join(', ') || 'None'}` : 'No job keywords provided',
+            `Skills list size: ${candidateSkills.length}`
           ]
         },
         formatting: {
-          score: 88,
-          status: 'good',
+          score: formattingScore,
+          status: mkStatus(formattingScore),
           details: [
-            'Clean, parseable structure detected',
-            'Standard section headings used',
-            'Proper bullet point formatting'
+            `Bullet points detected: ${bulletCount}`,
+            `Avg line length: ${Math.round(avgLineLen)} chars`,
+            candidateData.isFromUpload ? 'Original structure preserved' : 'Manual entry structure'
           ]
         },
         sections: {
-          score: 92,
-          status: 'good',
+          score: sectionsScore,
+          status: mkStatus(sectionsScore),
           details: [
-            'All essential sections present',
-            'Professional summary included',
-            'Work experience properly structured'
+            `Sections present: ${present}/${essentialSections.length}`,
+            essentialSections.filter(([name, content]) => !content || content.trim().length <= 30).length ? 'Consider expanding missing/short sections' : 'All essential sections filled',
+            jobRequirements.length ? `${jobRequirements.length} job requirements analyzed` : 'No job requirements extracted'
           ]
         },
         readability: {
-          score: 85,
-          status: 'good',
+          score: readabilityScore,
+          status: mkStatus(readabilityScore),
           details: [
-            'Clear, concise language used',
-            'Good use of action verbs',
-            'Quantifiable achievements highlighted'
+            `Avg words per sentence: ${Math.round(avgWordsPerSentence)}`,
+            `Action verbs used: ${actionVerbMatches}`,
+            candidateData.experience.length > 1500 ? 'Consider shortening very long experience section' : 'Experience length reasonable'
           ]
         }
       }

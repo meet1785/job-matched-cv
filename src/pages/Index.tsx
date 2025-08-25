@@ -99,7 +99,7 @@ const Index = () => {
           )}
 
           {currentStep === "job" && candidateData && (
-            <JobDescriptionForm onSubmit={handleJobSubmit} />
+            <JobDescriptionForm onSubmit={handleJobSubmit} candidateSkills={candidateData.skills} />
           )}
 
           {currentStep === "integration" && candidateData && jobData && (

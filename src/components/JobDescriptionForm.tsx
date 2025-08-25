@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { analyzeJobDescription } from "@/lib/jobAnalysis";
 
 interface JobDescriptionData {
   jobTitle: string;
@@ -20,9 +21,10 @@ interface JobDescriptionData {
 interface JobDescriptionFormProps {
   onSubmit: (data: JobDescriptionData) => void;
   isLoading?: boolean;
+  candidateSkills?: string; // pass candidate skills for gap analysis
 }
 
-export const JobDescriptionForm = ({ onSubmit, isLoading }: JobDescriptionFormProps) => {
+export const JobDescriptionForm = ({ onSubmit, isLoading, candidateSkills = '' }: JobDescriptionFormProps) => {
   const [formData, setFormData] = useState({
     jobTitle: "",
     companyName: "",
@@ -33,28 +35,12 @@ export const JobDescriptionForm = ({ onSubmit, isLoading }: JobDescriptionFormPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Mock AI analysis for demo purposes
-    const mockAnalysis = {
-      keywords: ["JavaScript", "React", "Node.js", "API", "Database", "Agile", "Leadership"],
-      requirements: [
-        "5+ years of software development experience",
-        "Experience with React and modern JavaScript",
-        "Strong problem-solving skills",
-        "Experience with REST APIs",
-        "Bachelor's degree in Computer Science or related field"
-      ],
-      skillsGap: ["Docker", "Kubernetes", "GraphQL"]
-    };
-    
-    setAiAnalysis(mockAnalysis);
-    
+    if (!aiAnalysis) return; // ensure analysis was run
     const submissionData: JobDescriptionData = {
       ...formData,
-      requiredSkills: mockAnalysis.keywords,
-      aiAnalysis: mockAnalysis,
+      requiredSkills: aiAnalysis.keywords,
+      aiAnalysis: aiAnalysis,
     };
-    
     onSubmit(submissionData);
   };
 
@@ -64,17 +50,8 @@ export const JobDescriptionForm = ({ onSubmit, isLoading }: JobDescriptionFormPr
 
   const parseJobDescription = () => {
     if (formData.jobDescription) {
-      // Mock parsing logic - in real implementation, this would call an AI service
-      const mockKeywords = ["React", "JavaScript", "API", "Database", "Agile"];
-      setAiAnalysis({
-        keywords: mockKeywords,
-        requirements: [
-          "Extract key requirements from job description",
-          "Identify critical skills and qualifications",
-          "Determine experience level needed"
-        ],
-        skillsGap: ["GraphQL", "Docker"]
-      });
+      const analysis = analyzeJobDescription(formData.jobDescription, candidateSkills || '');
+      setAiAnalysis(analysis);
     }
   };
 
