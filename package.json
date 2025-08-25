@@ -6,9 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-  "build": "vite build",
-  "predeploy": "npm run build",
-  "deploy": "gh-pages -d dist",
+    "build": "vite build",
+  "predeploy": "npm run build && cp dist/index.html dist/404.html && cp public/pdf.worker.min.js dist/pdf.worker.min.js",
+    "deploy": "gh-pages -d dist",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"

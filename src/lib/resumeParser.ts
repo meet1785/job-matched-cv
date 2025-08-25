@@ -3,7 +3,10 @@ import * as pdfjsLib from 'pdfjs-dist';
 import * as mammoth from 'mammoth';
 
 // Set the worker source for PDF.js
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+// Use BASE_URL aware path so PDF worker loads correctly on GitHub Pages sub-path
+// Falls back to root for local dev.
+// import.meta.env.BASE_URL includes trailing slash when set by Vite.
+pdfjsLib.GlobalWorkerOptions.workerSrc = `${(import.meta as any).env?.BASE_URL || '/'}pdf.worker.min.js`;
 
 export interface ParsedResumeData {
   fullName: string;
