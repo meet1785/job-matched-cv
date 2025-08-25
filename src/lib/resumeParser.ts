@@ -1,4 +1,9 @@
 // Resume parsing utilities for extracting data from uploaded files
+import * as pdfjsLib from 'pdfjs-dist';
+import * as mammoth from 'mammoth';
+
+// Set the worker source for PDF.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
 export interface ParsedResumeData {
   fullName: string;
@@ -13,8 +18,8 @@ export interface ParsedResumeData {
     fileType: string;
     fileName?: string;
     fileSize?: number;
-    structure: any;
-    styling: any;
+    structure: Record<string, unknown>;
+    styling: Record<string, unknown>;
   };
 }
 
@@ -57,44 +62,41 @@ export const parseResumeFile = async (file: File): Promise<ParsedResumeData> => 
   }
 };
 
-// Extract text from PDF files
+// Extract text from PDF files using pdf.js
 const extractTextFromPDF = async (file: File): Promise<string> => {
-  // For now, we'll use a simple approach. In production, you'd use pdf-parse or similar
-  const arrayBuffer = await file.arrayBuffer();
-  const uint8Array = new Uint8Array(arrayBuffer);
-  
-  // Simple PDF text extraction (limited but functional for basic resumes)
-  let text = '';
-  for (let i = 0; i < uint8Array.length - 1; i++) {
-    if (uint8Array[i] === 40 && uint8Array[i + 1] !== 40) { // Look for text strings in PDF
-      let j = i + 1;
-      while (j < uint8Array.length && uint8Array[j] !== 41) {
-        if (uint8Array[j] >= 32 && uint8Array[j] <= 126) {
-          text += String.fromCharCode(uint8Array[j]);
-        }
-        j++;
-      }
-      text += ' ';
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      
+      const pageText = textContent.items
+        .map((item: any) => ('str' in item ? item.str : ''))
+        .join(' ');
+      
+      fullText += pageText + '\n';
     }
+
+    return fullText.trim();
+  } catch (error) {
+    console.error('Error extracting PDF text:', error);
+    return 'PDF parsing failed. Please try uploading a different format or fill manually.';
   }
-  
-  return text.length > 50 ? text : 'PDF parsing requires additional libraries. Please use DOCX or plain text format.';
 };
 
-// Extract text from DOCX files
+// Extract text from DOCX files using mammoth.js
 const extractTextFromDOCX = async (file: File): Promise<string> => {
-  // Basic DOCX text extraction - in production, use mammoth.js or similar
-  const arrayBuffer = await file.arrayBuffer();
-  const uint8Array = new Uint8Array(arrayBuffer);
-  
-  // Convert to string and look for text patterns
-  const decoder = new TextDecoder('utf-8', { fatal: false });
-  const content = decoder.decode(uint8Array);
-  
-  // Extract readable text (basic approach)
-  const textMatch = content.match(/[\w\s@.,;:!?()-]+/g);
-  return textMatch ? textMatch.join(' ').replace(/\s+/g, ' ').trim() : 
-    'DOCX parsing requires additional libraries. Please fill manually or use plain text.';
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value;
+  } catch (error) {
+    console.error('Error extracting DOCX text:', error);
+    return 'DOCX parsing failed. Please try uploading a different format or fill manually.';
+  }
 };
 
 // Extract text from DOC files
@@ -107,7 +109,7 @@ const parseTextContent = (text: string, fileType: string): Omit<ParsedResumeData
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
   // Extract email
-  const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
+  const emailRegex = /[\w.-]+@[\w.-]+\.\w+/g;
   const emailMatch = text.match(emailRegex);
   const email = emailMatch ? emailMatch[0] : '';
 
@@ -227,7 +229,7 @@ const detectResumeStyle = (text: string) => {
   };
 };
 
-export const preserveResumeFormat = (originalFormat: any, newContent: any) => {
+export const preserveResumeFormat = (originalFormat: Record<string, unknown>, newContent: Record<string, unknown>) => {
   return {
     ...newContent,
     formatInstructions: {
