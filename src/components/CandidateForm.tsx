@@ -9,7 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { FileUpload } from "@/components/ui/file-upload";
-import { parseResumeFile, ParsedResumeData } from "@/lib/resumeParser";
+// Lazy import resume parser to reduce initial bundle size
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+import type { ParsedResumeData } from "@/lib/resumeParser";
 
 interface CandidateData {
   fullName: string;
@@ -60,7 +62,8 @@ export const CandidateForm = ({ onSubmit, isLoading }: CandidateFormProps) => {
     setIsParsing(true);
     
     try {
-      const parsedData = await parseResumeFile(file);
+  const { parseResumeFile } = await import("@/lib/resumeParser");
+  const parsedData = await parseResumeFile(file);
       setFormData({
         ...parsedData,
         originalFormat: parsedData.originalFormat,
@@ -138,7 +141,7 @@ export const CandidateForm = ({ onSubmit, isLoading }: CandidateFormProps) => {
                 <div className="text-sm text-muted-foreground space-y-1">
                   <p>• Name: {formData.fullName}</p>
                   <p>• Email: {formData.email}</p>
-                  <p>• Format: {formData.originalFormat?.fileType || 'Unknown'}</p>
+                  <p>• Format: {String((formData.originalFormat as any)?.fileType || 'Unknown')}</p>
                   <p>• Skills: {formData.skills.substring(0, 50)}...</p>
                 </div>
               </div>

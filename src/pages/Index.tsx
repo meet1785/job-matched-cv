@@ -2,9 +2,11 @@ import { useState } from "react";
 import { HeroSection } from "@/components/HeroSection";
 import { CandidateForm } from "@/components/CandidateForm";
 import { JobDescriptionForm } from "@/components/JobDescriptionForm";
-import { MakeIntegration } from "@/components/MakeIntegration";
+import { Suspense, lazy } from 'react';
+const MakeIntegration = lazy(() => import("@/components/MakeIntegration").then(m => ({ default: m.MakeIntegration })));
 import { ProgressIndicator } from "@/components/ProgressIndicator";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type Step = "hero" | "candidate" | "job" | "integration" | "complete";
 
@@ -80,6 +82,7 @@ const Index = () => {
   return (
     <main className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-end mb-4"><ThemeToggle /></div>
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold mb-2">Resume Generator</h1>
@@ -103,11 +106,13 @@ const Index = () => {
           )}
 
           {currentStep === "integration" && candidateData && jobData && (
-            <MakeIntegration 
-              candidateData={candidateData}
-              jobData={jobData}
-              onComplete={handleIntegrationComplete}
-            />
+            <Suspense fallback={<div className="text-center py-12 text-sm text-muted-foreground">Loading integration module...</div>}>
+              <MakeIntegration 
+                candidateData={candidateData}
+                jobData={jobData}
+                onComplete={handleIntegrationComplete}
+              />
+            </Suspense>
           )}
 
           {currentStep === "complete" && (
