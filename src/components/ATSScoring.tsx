@@ -13,9 +13,32 @@ interface ATSScore {
   };
 }
 
+interface CandidateData {
+  fullName: string;
+  email: string;
+  phone: string;
+  location: string;
+  summary: string;
+  experience: string;
+  skills: string;
+  education: string;
+  isFromUpload?: boolean;
+}
+
+interface JobData {
+  jobTitle: string;
+  companyName: string;
+  jobDescription: string;
+  aiAnalysis?: {
+    keywords: string[];
+    requirements: string[];
+    skillsGap: string[];
+  };
+}
+
 interface ATSScoringProps {
-  candidateData: any;
-  jobData: any;
+  candidateData: CandidateData;
+  jobData: JobData;
   isLoading?: boolean;
 }
 

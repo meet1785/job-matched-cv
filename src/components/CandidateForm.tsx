@@ -20,7 +20,7 @@ interface CandidateData {
   experience: string;
   skills: string;
   education: string;
-  originalFormat?: any;
+  originalFormat?: Record<string, unknown>;
   isFromUpload?: boolean;
 }
 
