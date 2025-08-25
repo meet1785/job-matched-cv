@@ -343,16 +343,19 @@ const detectResumeStyle = (text: string) => {
   };
 };
 
-export const preserveResumeFormat = (originalFormat: Record<string, unknown>, newContent: Record<string, unknown>) => {
+export const preserveResumeFormat = <T extends object>(
+  originalFormat: Record<string, unknown>,
+  newContent: T
+): T & { formatInstructions: Record<string, unknown> } => {
   return {
-    ...newContent,
+    ...(newContent as T),
     formatInstructions: {
       ...originalFormat,
       preserveStructure: true,
       maintainStyling: true,
       instructions: [
         "Maintain original font family and size",
-        "Preserve section order and layout", 
+        "Preserve section order and layout",
         "Keep consistent spacing and margins",
         "Use same bullet point style",
         "Maintain color scheme"

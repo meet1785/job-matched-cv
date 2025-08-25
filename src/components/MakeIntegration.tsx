@@ -45,6 +45,9 @@ export const MakeIntegration = ({ candidateData, jobData, onComplete }: MakeInte
   const [showATSScoring, setShowATSScoring] = useState(false);
   const [progress, setProgress] = useState(0);
   const [processingSteps, setProcessingSteps] = useState<string[]>([]);
+  const [webhookResponse, setWebhookResponse] = useState<any>(null);
+  const [webhookError, setWebhookError] = useState<string | null>(null);
+  const [isWaitingWebhook, setIsWaitingWebhook] = useState(false);
   const { toast } = useToast();
 
   const simulateProgress = () => {
@@ -70,14 +73,23 @@ export const MakeIntegration = ({ candidateData, jobData, onComplete }: MakeInte
         setProgress(((index + 1) / steps.length) * 100);
         
         if (index === steps.length - 1) {
-          setTimeout(() => {
+          const finish = () => {
             setIsProcessing(false);
             setShowATSScoring(true);
             toast({
               title: "Resume Generated Successfully!",
-              description: "Review your ATS compatibility score below.",
+              description: "Review automation output and ATS score below.",
             });
-          }, 1000);
+          };
+          // If webhook already returned, finish immediately, else poll until webhook done or timeout
+          const start = Date.now();
+          const interval = setInterval(() => {
+            const timeoutReached = Date.now() - start > 20000; // 20s safety
+            if (!isWaitingWebhook || webhookResponse || webhookError || timeoutReached) {
+              clearInterval(interval);
+              finish();
+            }
+          }, 400);
         }
       }, index * 800);
     });
@@ -133,6 +145,7 @@ export const MakeIntegration = ({ candidateData, jobData, onComplete }: MakeInte
       console.log("Sending enhanced payload to Make.com:", payload);
 
       // Send to Make.com webhook with enhanced format preservation
+      setIsWaitingWebhook(true);
       const response = await fetch(webhookUrl, {
         method: "POST",
         headers: {
@@ -140,13 +153,25 @@ export const MakeIntegration = ({ candidateData, jobData, onComplete }: MakeInte
           "X-Resume-Source": candidateData.isFromUpload ? "upload" : "manual",
           "X-Preserve-Format": candidateData.isFromUpload ? "true" : "false"
         },
-        mode: "no-cors",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
 
-      console.log("Make.com webhook triggered successfully");
+      // Attempt to parse JSON; fallback to text
+      let data: any = null;
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        try { data = await response.json(); } catch { /* ignore */ }
+      }
+      if (!data) {
+        try { data = await response.text(); } catch { /* ignore */ }
+      }
+      setWebhookResponse(data || { status: response.status, message: 'No content' });
+      setIsWaitingWebhook(false);
+      console.log("Make.com webhook responded:", data);
     } catch (error) {
       console.error("Error triggering Make.com webhook:", error);
+      setWebhookError(error?.message || 'Webhook request failed');
+      setIsWaitingWebhook(false);
       setIsProcessing(false);
       toast({
         title: "Error",
@@ -226,6 +251,25 @@ export const MakeIntegration = ({ candidateData, jobData, onComplete }: MakeInte
               jobData={jobData} 
               isLoading={false}
             />
+            <div className="p-4 bg-accent/10 rounded-lg border space-y-3">
+              <h3 className="text-sm font-semibold">Automation Output</h3>
+              {isWaitingWebhook && (
+                <p className="text-xs text-muted-foreground">Waiting for webhook response...</p>
+              )}
+              {webhookError && (
+                <p className="text-xs text-destructive">Webhook Error: {webhookError}</p>
+              )}
+              {webhookResponse && (
+                <pre className="text-xs whitespace-pre-wrap max-h-60 overflow-y-auto bg-background p-3 rounded border">
+                  {typeof webhookResponse === 'string' 
+                    ? webhookResponse.slice(0, 5000) 
+                    : JSON.stringify(webhookResponse, null, 2).slice(0, 5000)}
+                </pre>
+              )}
+              {!webhookResponse && !webhookError && !isWaitingWebhook && (
+                <p className="text-xs text-muted-foreground">No response captured (CORS or scenario not returning data). The automation may still have processed your payload.</p>
+              )}
+            </div>
             <div className="text-center">
               <Button 
                 onClick={onComplete}
