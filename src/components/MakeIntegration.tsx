@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { ATSScoring } from "./ATSScoring";
+import { preserveResumeFormat } from "@/lib/resumeParser";
 
 interface MakeIntegrationProps {
   candidateData: any;
@@ -74,26 +75,46 @@ export const MakeIntegration = ({ candidateData, jobData, onComplete }: MakeInte
     simulateProgress();
 
     try {
+      // Prepare enhanced payload with format preservation
+      const enhancedPayload = candidateData.isFromUpload && candidateData.originalFormat
+        ? preserveResumeFormat(candidateData.originalFormat, candidateData)
+        : candidateData;
+
       const payload = {
         timestamp: new Date().toISOString(),
-        candidate: candidateData,
+        candidate: enhancedPayload,
         jobDescription: jobData,
         automation_trigger: "resume_generation",
+        source: candidateData.isFromUpload ? "uploaded_resume" : "manual_input",
         options: {
           format: ["pdf", "docx", "html"],
           ats_optimization: true,
           keyword_optimization: true,
-          professional_formatting: true
+          professional_formatting: true,
+          preserve_original_format: candidateData.isFromUpload || false,
+          format_instructions: candidateData.originalFormat || null
+        },
+        processing_instructions: {
+          maintain_structure: candidateData.isFromUpload,
+          optimize_for_ats: true,
+          keyword_density_target: "2-3%",
+          sections_to_optimize: ["summary", "experience", "skills"],
+          output_formats: {
+            primary: candidateData.originalFormat?.fileType || "pdf",
+            secondary: ["html", "docx"]
+          }
         }
       };
 
-      console.log("Sending to Make.com:", payload);
+      console.log("Sending enhanced payload to Make.com:", payload);
 
-      // In a real implementation, this would send to the actual webhook
+      // Send to Make.com webhook with enhanced format preservation
       const response = await fetch(webhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-Resume-Source": candidateData.isFromUpload ? "upload" : "manual",
+          "X-Preserve-Format": candidateData.isFromUpload ? "true" : "false"
         },
         mode: "no-cors",
         body: JSON.stringify(payload),
@@ -153,6 +174,16 @@ export const MakeIntegration = ({ candidateData, jobData, onComplete }: MakeInte
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">AI Analysis</Badge>
                   <span className="text-sm">Keywords and optimization data</span>
+                </div>
+                {candidateData?.isFromUpload && (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">Format Preservation</Badge>
+                    <span className="text-sm">Original format will be maintained</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">Output Formats</Badge>
+                  <span className="text-sm">PDF, DOCX, HTML</span>
                 </div>
               </div>
             </div>

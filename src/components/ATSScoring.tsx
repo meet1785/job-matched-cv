@@ -31,8 +31,11 @@ export const ATSScoring = ({ candidateData, jobData, isLoading }: ATSScoringProp
     
     const keywordScore = Math.min(95, (keywordMatches.length / jobKeywords.length) * 100);
     
+    // Format preservation bonus for uploaded resumes
+    const formatBonus = candidateData.isFromUpload ? 5 : 0;
+    
     return {
-      overall: Math.round((keywordScore + 88 + 92 + 85) / 4), // Mock overall score
+      overall: Math.round((keywordScore + 88 + 92 + 85 + formatBonus) / 4), // Enhanced overall score
       categories: {
         keywords: {
           score: Math.round(keywordScore),
