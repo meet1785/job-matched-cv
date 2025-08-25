@@ -1,73 +1,129 @@
-# Welcome to your Lovable project
+<div align="center">
+	<h1>Job Matched CV / ATS-Optimized Resume Generator</h1>
+	<p>Create adaptive, ATS-friendly resumes aligned to specific job descriptions with heuristic parsing, keyword gap analysis, automation webhook delivery, and modern theming (light / dark / system).</p>
+	<p>
+		<strong>Live:</strong> <a href="https://meet1785.github.io/job-matched-cv/" target="_blank" rel="noopener">GitHub Pages Deployment</a>
+	</p>
+</div>
 
-## Project info
+## ✨ Features
 
-**URL**: https://lovable.dev/projects/4883ae47-3f0e-41bb-9ce1-86a70668056e
+- Resume file parsing (PDF / DOCX) with structure + section heuristics
+- Automatic extraction: name, contact, summary, skills, experience, education
+- Dynamic job description analysis (keyword frequency, requirement lines, skill gaps)
+- ATS scoring (keywords, formatting, sections completeness, readability)
+- Make.com webhook integration (format preservation metadata & async response display)
+- Theme toggle: system / light / dark (accessible palette & reduced eye strain)
+- Reduced motion support (respects `prefers-reduced-motion`)
+- Lazy loading of heavy parsing modules to reduce initial bundle size
+- Modern responsive UI using Tailwind + shadcn-ui + glass surfaces
 
-## How can I edit this code?
+## 🧱 Tech Stack
 
-There are several ways of editing your application.
+| Layer | Tools |
+|-------|-------|
+| Build | Vite (React + SWC) |
+| UI    | React 18, shadcn-ui (Radix primitives), Tailwind CSS |
+| Logic | TypeScript, heuristic parsing & scoring utilities |
+| State | Local component state + React Query scaffold |
+| Automation | Make.com webhook integration |
+| Deployment | GitHub Pages (gh-pages) |
 
-**Use Lovable**
+## 📁 Key Directories
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/4883ae47-3f0e-41bb-9ce1-86a70668056e) and start prompting.
+```
+src/
+	components/         UI + feature components (forms, scoring, integration)
+	lib/
+		resumeParser.ts   Resume parsing & format preservation
+		jobAnalysis.ts    JD keyword + requirements + gap analysis
+	pages/              Multi-step flow (Index)
+	hooks/              Reusable hooks
+	assets/             Static images
+```
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🚀 Getting Started
 
-**Use your preferred IDE**
+Requirements: Node.js 18+ (recommend using `nvm`).
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+git clone https://github.com/meet1785/job-matched-cv.git
+cd job-matched-cv
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Visit http://localhost:8080
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🧪 Development Scripts
 
-**Use GitHub Codespaces**
+```bash
+npm run dev       # Start dev server
+npm run build     # Production build
+npm run preview   # Preview production build locally
+npm run lint      # Lint code
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🌗 Theming & Accessibility
 
-## What technologies are used for this project?
+- Theme toggle stored in `localStorage` (falls back to system preference).
+- Reduced motion: animations are minimized when user sets OS-level preference.
+- High contrast adjustments & softened saturation to reduce visual fatigue.
 
-This project is built with:
+## ⚙️ Deployment (GitHub Pages)
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Already configured:
 
-## How can I deploy this project?
+1. `homepage` field in `package.json`
+2. `base` path in `vite.config.ts` for production
+3. Scripts:
+	 ```bash
+	 npm run deploy  # Builds & publishes dist/ to gh-pages branch
+	 ```
+4. GitHub Pages points to the `gh-pages` branch.
 
-Simply open [Lovable](https://lovable.dev/projects/4883ae47-3f0e-41bb-9ce1-86a70668056e) and click on Share -> Publish.
+## 🔌 Make.com Webhook Integration
 
-## Can I connect a custom domain to my Lovable project?
+- Default webhook URL configured in `MakeIntegration.tsx` (`PERMANENT_WEBHOOK`).
+- Sends structured payload: candidate + job + analysis + format metadata.
+- Awaits response and displays raw data or fallback text if CORS blocks body.
 
-Yes, you can!
+## 🧠 ATS Scoring Heuristics
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Scoring categories combine:
+- Keyword coverage (candidate vs extracted JD keywords)
+- Section completeness (summary / experience / skills / education)
+- Formatting quality (bullets, average line length, structure preservation)
+- Readability (sentence length, action verbs, content length bounds)
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Overall score uses weighted blend; easily extend in `ATSScoring.tsx`.
+
+## 📦 Code Splitting
+
+Heavy modules (e.g. PDF / DOCX parsing) are dynamically imported to shrink initial bundle size; add additional dynamic `import()` boundaries as features grow.
+
+## 🔒 Privacy & Data
+
+All parsing & analysis run client-side before optional webhook dispatch. No server persistence included by default.
+
+## 🛣️ Roadmap Ideas
+
+- Export tuned resume templates (multiple design variants)
+- Fine-grained skill taxonomy classification
+- Multi-language parsing support
+- Download DOCX reconstruction with preserved layout
+- Optional OpenAI / LLM enhancement layer (behind env-config)
+
+## 🤝 Contributing
+
+1. Fork & create a feature branch
+2. Keep changes atomic & add concise commit messages
+3. Submit a PR with a short rationale & before/after notes
+
+## 🧾 License
+
+MIT. See `LICENSE` if added (currently none provided).
+
+---
+
+Maintained by @meet1785 – feel free to open issues or feature requests.
