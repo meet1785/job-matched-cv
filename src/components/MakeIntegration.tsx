@@ -39,8 +39,10 @@ interface MakeIntegrationProps {
   onComplete: () => void;
 }
 
+const PERMANENT_WEBHOOK = "https://hook.eu2.make.com/vccbm0b5e6zb6nk5475i4akaguoki15q";
+
 export const MakeIntegration = ({ candidateData, jobData, onComplete }: MakeIntegrationProps) => {
-  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState(PERMANENT_WEBHOOK);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showATSScoring, setShowATSScoring] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -202,10 +204,9 @@ export const MakeIntegration = ({ candidateData, jobData, onComplete }: MakeInte
                 placeholder="https://hooks.make.com/your-webhook-url"
                 value={webhookUrl}
                 onChange={(e) => setWebhookUrl(e.target.value)}
-                required
               />
               <p className="text-sm text-muted-foreground">
-                Get this URL from your Make.com scenario webhook trigger
+                Using default permanent webhook unless you replace it
               </p>
             </div>
 
